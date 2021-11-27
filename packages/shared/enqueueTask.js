@@ -9,7 +9,7 @@
 
 let didWarnAboutMessageChannel = false;
 let enqueueTaskImpl = null;
-
+// 及时任务当即执行， 但是为了不阻塞页面交互，因此放到宏任务中执行
 export default function enqueueTask(task: () => void) {
   if (enqueueTaskImpl === null) {
     try {

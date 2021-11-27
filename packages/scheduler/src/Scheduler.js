@@ -77,7 +77,7 @@ var isPerformingWork = false;
 
 var isHostCallbackScheduled = false;
 var isHostTimeoutScheduled = false;
-
+// 把timeQueue放到taskqueue
 function advanceTimers(currentTime) {
   // Check for tasks that are no longer delayed and add them to the queue.
   let timer = peek(timerQueue);
@@ -276,9 +276,12 @@ function unstable_wrapCallback(callback) {
   };
 }
 
+
+// 计算得到expirationTime , expirationTime = currentTime + timeout(不同优先级的时间间隔，时间越短优先级越大)
 function unstable_scheduleCallback(priorityLevel, callback, options) {
   var currentTime = getCurrentTime();
 
+  // 得到当前时间
   var startTime;
   if (typeof options === 'object' && options !== null) {
     var delay = options.delay;
@@ -291,7 +294,7 @@ function unstable_scheduleCallback(priorityLevel, callback, options) {
     startTime = currentTime;
   }
 
-  var timeout;
+  var timeout; // 根据不同任务增加不同间隔
   switch (priorityLevel) {
     case ImmediatePriority:
       timeout = IMMEDIATE_PRIORITY_TIMEOUT;
@@ -325,10 +328,12 @@ function unstable_scheduleCallback(priorityLevel, callback, options) {
     newTask.isQueued = false;
   }
 
-  if (startTime > currentTime) {
+  if (startTime > currentTime) { // 即使优先级低也有轮到的一天
     // This is a delayed task.
     newTask.sortIndex = startTime;
     push(timerQueue, newTask);
+    // 当大于当前时间的话放到timequeue
+    // 在间隔时间之后调用一个handleTimeout主要是吧timerQueue的任务加入taskQueue队列里来，然后调用requestHostCallback
     if (peek(taskQueue) === null && newTask === peek(timerQueue)) {
       // All tasks are delayed, and this is the task with the earliest delay.
       if (isHostTimeoutScheduled) {
@@ -351,6 +356,7 @@ function unstable_scheduleCallback(priorityLevel, callback, options) {
     // wait until the next time we yield.
     if (!isHostCallbackScheduled && !isPerformingWork) {
       isHostCallbackScheduled = true;
+      // 这里会调度及时任务
       requestHostCallback(flushWork);
     }
   }

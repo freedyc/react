@@ -570,13 +570,21 @@ export function scheduleUpdateOnFiber(
 
   // TODO: requestUpdateLanePriority also reads the priority. Pass the
   // priority as an argument to that function and this one.
+  // 获取当前的优先级
   const priorityLevel = getCurrentPriorityLevel();
-
+  // 同步任务立即执行异步任务走调度逻辑
+  // SyncLane = 1
   if (lane === SyncLane) {
     if (
       // Check if we're inside unbatchedUpdates
-      (executionContext & LegacyUnbatchedContext) !== NoContext &&
+      // executionContext 执行上下文,执行到那个阶段了赋值不同的值
+      // RenderContext： 通过执行render渲染到页面， 0b0010000 = 16
+      // CommitConext通过偶执行更新  0b0100000 =  32
+      // LegacyUnbatchedContext：固定的值 0b0001000 = 8
+      // NoContext = 0
+      (executionContext & LegacyUnbatchedContext) !== NoContext && // 检查是否非批处理， 默认是批处理 不批处理可以赋值unBatchUpdate ReactDOM.render是非批处理
       // Check if we're not already rendering
+      // 检查我们是否尚未渲染
       (executionContext & (RenderContext | CommitContext)) === NoContext
     ) {
       // Register pending interactions on the root to avoid losing traced interaction data.
@@ -601,6 +609,7 @@ export function scheduleUpdateOnFiber(
     }
   } else {
     // Schedule a discrete update but only if it's not Sync.
+    // 如果不是同步那就进行调度更新
     if (
       (executionContext & DiscreteEventContext) !== NoContext &&
       // Only updates at user-blocking priority or greater are considered
@@ -611,7 +620,7 @@ export function scheduleUpdateOnFiber(
       // This is the result of a discrete event. Track the lowest priority
       // discrete update per root so we can flush them early, if needed.
       if (rootsWithPendingDiscreteUpdates === null) {
-        rootsWithPendingDiscreteUpdates = new Set([root]);
+        rootsWithPendingDiscreteUpdates = new Set([root]); // 高优先级任务存在这里
       } else {
         rootsWithPendingDiscreteUpdates.add(root);
       }
@@ -682,11 +691,15 @@ function markUpdateLaneFromFiberToRoot(
 // of the existing task is the same as the priority of the next level that the
 // root has work on. This function is called on every update, and right before
 // exiting a task.
+// 使用此函数为根用户调度任务。每个根只有一个任务;
+// 如果一个任务已经被调度，我们将检查以确保现有任务的优先级与根节点所处理的下一级别的优先级相同。
+// 这个函数在每次更新时调用，并在退出任务之前调用。
 function ensureRootIsScheduled(root: FiberRoot, currentTime: number) {
-  const existingCallbackNode = root.callbackNode;
+  const existingCallbackNode = root.callbackNode; // 设置一个🔒，看看是是否还有任务， 进入之前设置和执行完成后给变量赋值
 
-  // Check if any lanes are being starved by other work. If so, mark them as
-  // expired so we know to work on those next.
+  // Check if any lanes are being starved by other work. If so, mark them as expired so we know to work on those next.
+  // 检查是否有任何车道被其他工作占用。如果是这样，就把它们标记为过期，这样我们就知道下一步该做什么了。
+
   markStarvedLanesAsExpired(root, currentTime);
 
   // Determine the next lanes to work on, and their priority.
@@ -708,14 +721,22 @@ function ensureRootIsScheduled(root: FiberRoot, currentTime: number) {
   }
 
   // Check if there's an existing task. We may be able to reuse it.
+  // 检查是否存在现有任务。我们也许可以重复使用它。
   if (existingCallbackNode !== null) {
     const existingCallbackPriority = root.callbackPriority;
+    // 判断已存在的优先级和上一次优先是否一样， 一样则推出
+    // 由于获取从root开始，往下找到在这个优先级内所有update
+    // 比如存在连续的setState，会执行这个逻辑， 不会新建update
     if (existingCallbackPriority === newCallbackPriority) {
       // The priority hasn't changed. We can reuse the existing task. Exit.
+
       return;
     }
     // The priority changed. Cancel the existing callback. We'll schedule a new
     // one below.
+
+    // 16.13判断优先级的高低
+    // 如果优先级有变化则 取消掉，新建一个调度， 把之前任务中断
     cancelCallback(existingCallbackNode);
   }
 

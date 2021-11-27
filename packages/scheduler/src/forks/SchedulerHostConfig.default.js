@@ -216,7 +216,7 @@ if (
     // reset this.
     needsPaint = false;
   };
-
+  // 为了不阻塞，任务放到宏任务去执行 Freed
   const channel = new MessageChannel();
   const port = channel.port2;
   channel.port1.onmessage = performWorkUntilDeadline;
