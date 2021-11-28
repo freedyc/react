@@ -242,6 +242,8 @@ export function reconcileChildren(
     // won't update its child set by applying minimal side-effects. Instead,
     // we will add them all to the child before it gets rendered. That means
     // we can optimize this reconciliation pass by not tracking side-effects.
+
+    // 直接创建filber
     workInProgress.child = mountChildFibers(
       workInProgress,
       null,
@@ -255,6 +257,8 @@ export function reconcileChildren(
 
     // If we had any progressed work already, that is invalid at this point so
     // let's throw it out.
+
+    // 这里会做diff操作
     workInProgress.child = reconcileChildFibers(
       workInProgress,
       current.child,
@@ -898,11 +902,17 @@ function updateClassComponent(
       workInProgress.flags |= Placement;
     }
     // In the initial pass we might need to construct the instance.
+    // 执行构造函数
     constructClassInstance(workInProgress, Component, nextProps);
+    // 调用getDerivedStateFormProps
+    // 调用UNSAFE_componentWillMount
+
     mountClassInstance(workInProgress, Component, nextProps, renderLanes);
+    // 设置进入更新
     shouldUpdate = true;
   } else if (current === null) {
     // In a resume, we'll already have an instance we can reuse.
+    // 会执行willMount, shouldComponetUpdate 生命周期
     shouldUpdate = resumeMountClassInstance(
       workInProgress,
       Component,
@@ -910,6 +920,15 @@ function updateClassComponent(
       renderLanes,
     );
   } else {
+
+    // componentWillReceiveProps
+
+    // didUpdate大存在打上flags
+    // 执行getDerivedStateFormProps
+    // 执行shouldComponentUPdate
+    // 执行componetWillUpdate
+
+
     shouldUpdate = updateClassInstance(
       current,
       workInProgress,
@@ -918,6 +937,7 @@ function updateClassComponent(
       renderLanes,
     );
   }
+  // 执行render
   const nextUnitOfWork = finishClassComponent(
     current,
     workInProgress,
@@ -3277,6 +3297,7 @@ function beginWork(
           return updateOffscreenComponent(current, workInProgress, renderLanes);
         }
       }
+      // 能服用之前渲染的逻辑
       return bailoutOnAlreadyFinishedWork(current, workInProgress, renderLanes);
     } else {
       if ((current.flags & ForceUpdateForLegacySuspense) !== NoFlags) {

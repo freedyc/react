@@ -23,6 +23,7 @@ type BasicStateAction<S> = (S => S) | S;
 type Dispatch<A> = A => void;
 
 function resolveDispatcher() {
+  // 动态赋值的
   const dispatcher = ReactCurrentDispatcher.current;
   invariant(
     dispatcher !== null,
@@ -81,6 +82,8 @@ export function useState<S>(
   initialState: (() => S) | S,
 ): [S, Dispatch<BasicStateAction<S>>] {
   const dispatcher = resolveDispatcher();
+  // mount阶段返回onMount
+  // update阶段调用onUpdate
   return dispatcher.useState(initialState);
 }
 

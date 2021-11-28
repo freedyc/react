@@ -14,6 +14,7 @@ export const NoFlags = /*                      */ 0b000000000000000000;
 export const PerformedWork = /*                */ 0b000000000000000001;
 
 // You can change the rest (and add more).
+// 设定节点类型， 例如该节点是更新设置Update，节点如果是删除则 deletion
 export const Placement = /*                    */ 0b000000000000000010;
 export const Update = /*                       */ 0b000000000000000100;
 export const PlacementAndUpdate = /*           */ 0b000000000000000110;

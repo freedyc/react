@@ -185,7 +185,7 @@ function legacyRenderSubtreeIntoContainer(
   }
 
   // TODO: Without `any` type, Flow says "Property cannot be accessed on any
-  // member of intersection type." Whyyyyyy.
+  // member of intersection type." Whyyyyyy. // DOM上添加一个属性
   let root: RootType = (container._reactRootContainer: any);
   let fiberRoot;
   if (!root) {
@@ -203,6 +203,8 @@ function legacyRenderSubtreeIntoContainer(
       };
     }
     // Initial mount should not be batched.
+    // classComponent默认的批处理逻辑
+    // 这里是期望是不批处理，立刻就最高优先级渲染处理 // 设置unBatchUpdateContext上下文
     unbatchedUpdates(() => {
       updateContainer(children, fiberRoot, parentComponent, callback);
     });

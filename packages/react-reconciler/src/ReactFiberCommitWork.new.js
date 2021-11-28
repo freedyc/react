@@ -350,9 +350,11 @@ function commitHookEffectListUnmount(
   }
 }
 
+// 执行effect freed
 function commitHookEffectListMount(flags: HookFlags, finishedWork: Fiber) {
   const updateQueue: FunctionComponentUpdateQueue | null = (finishedWork.updateQueue: any);
   const lastEffect = updateQueue !== null ? updateQueue.lastEffect : null;
+  // 判断是否有更新队列
   if (lastEffect !== null) {
     const firstEffect = lastEffect.next;
     let effect = firstEffect;
@@ -440,6 +442,10 @@ function commitProfilerPassiveEffect(
   }
 }
 
+// DOM操作后 freed
+// layout阶段也是遍历effectList，调用声明周期，执行useEffect
+// 赋值ref
+// 处理回调
 function recursivelyCommitLayoutEffects(
   finishedWork: Fiber,
   finishedRoot: FiberRoot,
@@ -478,6 +484,7 @@ function recursivelyCommitLayoutEffects(
             }
           } else {
             try {
+              // 仍然是递归
               recursivelyCommitLayoutEffects(child, finishedRoot);
             } catch (error) {
               captureCommitPhaseError(child, finishedWork, error);
@@ -585,6 +592,7 @@ function recursivelyCommitLayoutEffects(
               finishedWork.mode & ProfileMode
             ) {
               try {
+                // 执行hooks
                 startLayoutEffectTimer();
                 commitHookEffectListMount(
                   HookLayout | HookHasEffect,
@@ -646,6 +654,7 @@ function recursivelyCommitLayoutEffects(
       if (enableScopeAPI) {
         // TODO: This is a temporary solution that allowed us to transition away from React Flare on www.
         if (flags & Ref && tag !== ScopeComponent) {
+          // 最后赋值ref
           commitAttachRef(finishedWork);
         }
       } else {

@@ -1123,7 +1123,7 @@ function updateClassInstance(
         unresolvedOldProps !== current.memoizedProps ||
         oldState !== current.memoizedState
       ) {
-        workInProgress.flags |= Update;
+        workInProgress.flags |= Update; // 如果需要更新打上标记
       }
     }
     if (typeof instance.getSnapshotBeforeUpdate === 'function') {

@@ -1222,6 +1222,7 @@ export function discreteUpdates<A, B, C, D, R>(
 
 export function unbatchedUpdates<A, R>(fn: (a: A) => R, a: A): R {
   const prevExecutionContext = executionContext;
+  // 赋值上下文
   executionContext &= ~BatchedContext;
   executionContext |= LegacyUnbatchedContext;
   try {
@@ -1589,6 +1590,7 @@ function renderRootSync(root: FiberRoot, lanes: Lanes) {
 /** @noinline */
 function workLoopSync() {
   // Already timed out, so perform work without checking if we need to yield.
+  // workInProgress 当前处理的节点
   while (workInProgress !== null) {
     performUnitOfWork(workInProgress);
   }
@@ -1681,6 +1683,7 @@ function performUnitOfWork(unitOfWork: Fiber): void {
   let next;
   if (enableProfilerTimer && (unitOfWork.mode & ProfileMode) !== NoMode) {
     startProfilerTimer(unitOfWork);
+    // 返回一个新的fiber节点/ next = workInProgress.child
     next = beginWork(current, unitOfWork, subtreeRenderLanes);
     stopProfilerTimerIfRunningAndRecordDelta(unitOfWork, true);
   } else {
@@ -1689,6 +1692,7 @@ function performUnitOfWork(unitOfWork: Fiber): void {
 
   resetCurrentDebugFiberInDEV();
   unitOfWork.memoizedProps = unitOfWork.pendingProps;
+  // 先执行child的当child执行完成之后在执行sibling
   if (next === null) {
     // If this doesn't spawn new work, complete the current work.
     completeUnitOfWork(unitOfWork);
@@ -1698,7 +1702,7 @@ function performUnitOfWork(unitOfWork: Fiber): void {
 
   ReactCurrentOwner.current = null;
 }
-
+// 遍历 sibling节点， 使用双重循环构建FiberTree
 function completeUnitOfWork(unitOfWork: Fiber): void {
   // Attempt to complete the current unit of work, then move to the next
   // sibling. If there are no more siblings, return to the parent fiber.
@@ -1775,6 +1779,8 @@ function completeUnitOfWork(unitOfWork: Fiber): void {
       }
     }
 
+
+    // 如果有兄弟节点把兄弟节点给workInProgress
     const siblingFiber = completedWork.sibling;
     if (siblingFiber !== null) {
       // If there is more work to do in this returnFiber, do that next.
@@ -1793,6 +1799,8 @@ function completeUnitOfWork(unitOfWork: Fiber): void {
   }
 }
 
+
+// commit阶段
 function commitRoot(root) {
   const renderPriorityLevel = getCurrentPriorityLevel();
   runWithPriority(
@@ -1924,6 +1932,7 @@ function commitRootImpl(root, renderPriorityLevel) {
     focusedInstanceHandle = prepareForCommit(root.containerInfo);
     shouldFireAfterActiveInstanceBlur = false;
 
+    // dom之前的操作
     commitBeforeMutationEffects(finishedWork);
 
     // We no longer need to track the active instance fiber
@@ -1936,6 +1945,7 @@ function commitRootImpl(root, renderPriorityLevel) {
     }
 
     // The next phase is the mutation phase, where we mutate the host tree.
+    // 把dom元素渲染到页面上
     commitMutationEffects(finishedWork, root, renderPriorityLevel);
 
     if (shouldFireAfterActiveInstanceBlur) {
@@ -1947,7 +1957,7 @@ function commitRootImpl(root, renderPriorityLevel) {
     // the mutation phase, so that the previous tree is still current during
     // componentWillUnmount, but before the layout phase, so that the finished
     // work is current during componentDidMount/Update.
-    root.current = finishedWork;
+    root.current = finishedWork; // 在此之后执行了work-inprogress tree
 
     // The next phase is the layout phase, where we call effects that read
     // the host tree after it's been mutated. The idiomatic use case for this is
@@ -1978,6 +1988,7 @@ function commitRootImpl(root, renderPriorityLevel) {
       resetCurrentDebugFiberInDEV();
     } else {
       try {
+        // DOM操作完执行
         recursivelyCommitLayoutEffects(finishedWork, root);
       } catch (error) {
         captureCommitPhaseErrorOnRoot(finishedWork, finishedWork, error);
@@ -2146,14 +2157,17 @@ function commitRootImpl(root, renderPriorityLevel) {
 
   return null;
 }
-
+// DOM操作前 freed
 function commitBeforeMutationEffects(firstChild: Fiber) {
   let fiber = firstChild;
   while (fiber !== null) {
+    // 处理fiber autoFcous, blur逻辑
     if (fiber.deletions !== null) {
+      // 这个fiber是要删除的
       commitBeforeMutationEffectsDeletions(fiber.deletions);
     }
 
+    // 递归调用处理子节点， 当孩子存在执行下面逻辑
     if (fiber.child !== null) {
       const primarySubtreeFlags = fiber.subtreeFlags & BeforeMutationMask;
       if (primarySubtreeFlags !== NoFlags) {
@@ -2171,15 +2185,21 @@ function commitBeforeMutationEffects(firstChild: Fiber) {
       resetCurrentDebugFiberInDEV();
     } else {
       try {
+        // 调用getSnapShotBeofreUpdate生命周期, 渲染到也页面之前执行， 渲染完成之后立即渲染页面
+
+        // 异步调度useEffect
         commitBeforeMutationEffectsImpl(fiber);
       } catch (error) {
         captureCommitPhaseError(fiber, fiber.return, error);
       }
     }
+    // 返回兄弟节点接着循环
     fiber = fiber.sibling;
   }
 }
 
+
+// 在beiginWork，存在getSnapshotBeofreUpdate的时候fiber.flags |= Snapshot
 function commitBeforeMutationEffectsImpl(fiber: Fiber) {
   const current = fiber.alternate;
   const flags = fiber.flags;
@@ -2198,7 +2218,9 @@ function commitBeforeMutationEffectsImpl(fiber: Fiber) {
   }
 
   if ((flags & Snapshot) !== NoFlags) {
+    //
     setCurrentDebugFiberInDEV(fiber);
+    // 调用getSnapShotBeofreUpdate生命周期， 执行顺序，优先执行子节点在执行自己
     commitBeforeMutationEffectOnFiber(current, fiber);
     resetCurrentDebugFiberInDEV();
   }
@@ -2208,6 +2230,9 @@ function commitBeforeMutationEffectsImpl(fiber: Fiber) {
     // the earliest opportunity.
     if (!rootDoesHavePassiveEffects) {
       rootDoesHavePassiveEffects = true;
+      // 异步调用useEffect,并不是DOM渲染前做的
+      // useLayoutEffect在dom操作同步执行回调
+      // useEffect异步回调，不想阻塞主线程，可以先尝试使用useEffect,不行的话再使用useLayoutEffect
       scheduleCallback(NormalSchedulerPriority, () => {
         flushPassiveEffects();
         return null;
@@ -2232,6 +2257,7 @@ function commitBeforeMutationEffectsDeletions(deletions: Array<Fiber>) {
   }
 }
 
+// DOM操作中 freed
 function commitMutationEffects(
   firstChild: Fiber,
   root: FiberRoot,
@@ -2241,6 +2267,7 @@ function commitMutationEffects(
   while (fiber !== null) {
     const deletions = fiber.deletions;
     if (deletions !== null) {
+      // 需要卸载组件会调用componentWillUnmount
       commitMutationEffectsDeletions(
         deletions,
         fiber,
@@ -2252,6 +2279,7 @@ function commitMutationEffects(
     if (fiber.child !== null) {
       const mutationFlags = fiber.subtreeFlags & MutationMask;
       if (mutationFlags !== NoFlags) {
+        // 递归调用处理Fiber
         commitMutationEffects(fiber.child, root, renderPriorityLevel);
       }
     }
@@ -2273,6 +2301,9 @@ function commitMutationEffects(
       resetCurrentDebugFiberInDEV();
     } else {
       try {
+        // 区分不同Flat执行Dom操作
+        // 已构造好了dom元素，存在stateNode节点，新增删除替换在这里做
+        // 执行完成后页面就渲染出来了
         commitMutationEffectsImpl(fiber, root, renderPriorityLevel);
       } catch (error) {
         captureCommitPhaseError(fiber, fiber.return, error);
@@ -3083,6 +3114,7 @@ function warnAboutUpdateOnUnmountedFiberInDEV(fiber) {
 let beginWork;
 if (__DEV__ && replayFailedUnitOfWorkWithInvokeGuardedCallback) {
   const dummyFiber = null;
+  // 创建Fiber节点
   beginWork = (current, unitOfWork, lanes) => {
     // If a component throws an error, we replay it again in a synchronously
     // dispatched event, so that the debugger will treat it as an uncaught

@@ -37,6 +37,7 @@ if (
 ) {
   // If this accidentally gets imported in a non-browser environment, e.g. JavaScriptCore,
   // fallback to a naive implementation.
+  // 如果当前环境飞浏览器则使用setTimeout实现
   let _callback = null;
   let _timeoutID = null;
   const _flushCallback = function() {

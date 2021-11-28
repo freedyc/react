@@ -363,6 +363,7 @@ function ChildReconciler(shouldTrackSideEffects) {
     }
   }
 
+  // 设置元素的类型
   function placeSingleChild(newFiber: Fiber): Fiber {
     // This is simpler for the single child case. We only need to do a
     // placement for inserting new children.
@@ -803,6 +804,7 @@ function ChildReconciler(shouldTrackSideEffects) {
     let newIdx = 0;
     let nextOldFiber = null;
     for (; oldFiber !== null && newIdx < newChildren.length; newIdx++) {
+      // 如果oldIndex 大于newIndex,那么旧的fiber等待新的fiber,一直打鞥到位置相同
       if (oldFiber.index > newIdx) {
         nextOldFiber = oldFiber;
         oldFiber = null;
@@ -849,6 +851,7 @@ function ChildReconciler(shouldTrackSideEffects) {
 
     if (newIdx === newChildren.length) {
       // We've reached the end of the new children. We can delete the rest.
+      // 如果新节点指针到最后了， 老节点还有剩余的就删除掉。
       deleteRemainingChildren(returnFiber, oldFiber);
       return resultingFirstChild;
     }
@@ -856,6 +859,7 @@ function ChildReconciler(shouldTrackSideEffects) {
     if (oldFiber === null) {
       // If we don't have any more existing children we can choose a fast path
       // since the rest will all be insertions.
+      // 如果新fiber和老的都匹配， 新Fiber比老的还多出5个，那这个5个也新增进去
       for (; newIdx < newChildren.length; newIdx++) {
         const newFiber = createChild(returnFiber, newChildren[newIdx], lanes);
         if (newFiber === null) {
@@ -1124,7 +1128,7 @@ function ChildReconciler(shouldTrackSideEffects) {
     created.return = returnFiber;
     return created;
   }
-
+  // 但节点DOM diff
   function reconcileSingleElement(
     returnFiber: Fiber,
     currentFirstChild: Fiber | null,
@@ -1203,6 +1207,7 @@ function ChildReconciler(shouldTrackSideEffects) {
         deleteRemainingChildren(returnFiber, child);
         break;
       } else {
+        // 直接标记删除。
         deleteChild(returnFiber, child);
       }
       child = child.sibling;
@@ -1293,6 +1298,7 @@ function ChildReconciler(shouldTrackSideEffects) {
     if (isObject) {
       switch (newChild.$$typeof) {
         case REACT_ELEMENT_TYPE:
+          // reconcilerChilrenFiber里会判断变更的类型是什么？ 比如有新增，删除，更新等烈性，每一种类型调用不同的方法赋予flags一个值，在commit阶段会直接根据flags来做dom操作
           return placeSingleChild(
             reconcileSingleElement(
               returnFiber,

@@ -305,7 +305,7 @@ function commitBeforeMutationLifeCycles(
       'likely caused by a bug in React. Please file an issue.',
   );
 }
-
+// 当写在的时候执行destroy
 function commitHookEffectListUnmount(tag: number, finishedWork: Fiber) {
   const updateQueue: FunctionComponentUpdateQueue | null = (finishedWork.updateQueue: any);
   const lastEffect = updateQueue !== null ? updateQueue.lastEffect : null;

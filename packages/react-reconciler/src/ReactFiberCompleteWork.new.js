@@ -797,6 +797,7 @@ function bubbleProperties(completedWork: Fiber) {
   return didBailout;
 }
 
+//freed 创建DOM节点
 function completeWork(
   current: Fiber | null,
   workInProgress: Fiber,
@@ -857,7 +858,7 @@ function completeWork(
       popHostContext(workInProgress);
       const rootContainerInstance = getRootHostContainer();
       const type = workInProgress.type;
-      if (current !== null && workInProgress.stateNode != null) {
+      if (current !== null && workInProgress.stateNode != null) {iu
         updateHostComponent(
           current,
           workInProgress,
@@ -910,6 +911,7 @@ function completeWork(
             workInProgress,
           );
 
+          // 所有资源素追加到当前元素中
           appendAllChildren(instance, workInProgress, false, false);
 
           workInProgress.stateNode = instance;

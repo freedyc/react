@@ -759,13 +759,14 @@ function updateReducer<S, I, A>(
           newBaseQueueLast = newBaseQueueLast.next = clone;
         }
 
-        // Process this update.
+        // Process this update. eagerState是预先处理的state
         if (update.eagerReducer === reducer) {
           // If this update was processed eagerly, and its reducer matches the
           // current reducer, we can use the eagerly computed state.
           newState = ((update.eagerState: any): S);
         } else {
           const action = update.action;
+          // state的计算本来就放在update
           newState = reducer(newState, action);
         }
       }
@@ -1123,21 +1124,26 @@ function updateMutableSource<Source, Snapshot>(
   return useMutableSource(hook, source, getSnapshot, subscribe);
 }
 
+// freed mountState
 function mountState<S>(
   initialState: (() => S) | S,
 ): [S, Dispatch<BasicStateAction<S>>] {
   const hook = mountWorkInProgressHook();
+  // 取默认值
   if (typeof initialState === 'function') {
     // $FlowFixMe: Flow doesn't like mixed types
     initialState = initialState();
   }
+  // state存放在memoizedState
   hook.memoizedState = hook.baseState = initialState;
+  // 新建一个queue
   const queue = (hook.queue = {
-    pending: null,
+    pending: null, // 当有update的时候放在pending中
     dispatch: null,
     lastRenderedReducer: basicStateReducer,
     lastRenderedState: (initialState: any),
   });
+  // 把queue传递给dispath
   const dispatch: Dispatch<
     BasicStateAction<S>,
   > = (queue.dispatch = (dispatchAction.bind(
@@ -1205,8 +1211,12 @@ function updateRef<T>(initialValue: T): {|current: T|} {
 
 function mountEffectImpl(fiberFlags, hookFlags, create, deps): void {
   const hook = mountWorkInProgressHook();
+  // 依赖数组
   const nextDeps = deps === undefined ? null : deps;
+  // 设置effectTag
   currentlyRenderingFiber.flags |= fiberFlags;
+  // 这里的memoizedState是一个Effect
+  // { tag， create， destory, deps，next}
   hook.memoizedState = pushEffect(
     HookHasEffect | hookFlags,
     create,
@@ -1225,6 +1235,7 @@ function updateEffectImpl(fiberFlags, hookFlags, create, deps): void {
     destroy = prevEffect.destroy;
     if (nextDeps !== null) {
       const prevDeps = prevEffect.deps;
+      // 对比依赖，如果依赖不等于则pushEffect
       if (areHookInputsEqual(nextDeps, prevDeps)) {
         pushEffect(hookFlags, create, destroy, nextDeps);
         return;
@@ -1700,11 +1711,12 @@ function dispatchAction<S, A>(
 
   const eventTime = requestEventTime();
   const lane = requestUpdateLane(fiber);
-
+  // 创建一个update
   const update: Update<S, A> = {
     lane,
     action,
     eagerReducer: null,
+    // 有闲暇时间的时候，可以提前把state计算了，保存下来
     eagerState: null,
     next: (null: any),
   };
@@ -1718,6 +1730,7 @@ function dispatchAction<S, A>(
     update.next = pending.next;
     pending.next = update;
   }
+  // update添加到pending
   queue.pending = update;
 
   const alternate = fiber.alternate;
@@ -1776,6 +1789,7 @@ function dispatchAction<S, A>(
         warnIfNotCurrentlyActingUpdatesInDev(fiber);
       }
     }
+    // 调用更新
     scheduleUpdateOnFiber(fiber, lane, eventTime);
   }
 
